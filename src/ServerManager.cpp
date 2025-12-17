@@ -232,6 +232,7 @@ void ServerManager_::setup()
         mws.addOptionBox("MQTT");
         mws.addOption("Broker", MQTT_HOST);
         mws.addOption("Port", MQTT_PORT);
+        mws.addOption("TLS", MQTT_TLS);
         mws.addOption("Username", MQTT_USER);
         mws.addOption("Password", MQTT_PASS);
         mws.addOption("Prefix", MQTT_PREFIX);
@@ -366,6 +367,8 @@ void ServerManager_::loadSettings()
         MQTT_PASS = doc["Password"].as<String>();
         MQTT_PREFIX = doc["Prefix"].as<String>();
         MQTT_PREFIX.trim();
+        if (doc.containsKey("TLS"))
+            MQTT_TLS = doc["TLS"].as<bool>();
         NET_STATIC = doc["Static IP"];
         HA_DISCOVERY = doc["Homeassistant Discovery"];
         NET_IP = doc["Local IP"].as<String>();
