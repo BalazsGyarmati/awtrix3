@@ -5,8 +5,10 @@
 #include "Adafruit_HTU21DF.h"
 #include "SoftwareSerial.h"
 #include <DFMiniMp3.h>
+#ifndef DISABLE_MELODYPLAYER
 #include <MelodyPlayer/melody_player.h>
 #include <MelodyPlayer/melody_factory.h>
+#endif
 #include "Globals.h"
 #include "DisplayManager.h"
 #include "MQTTManager.h"
@@ -17,7 +19,9 @@
 #include <ServerManager.h>
 #include <MedianFilterLib.h>
 #include <MeanFilterLib.h>
+#ifndef DISABLE_GAMES
 #include <Games/GameManager.h>
+#endif
 const int buzzerPin = 2;       // Buzzer an GPIO2
 const int baudRate = 50;       // Nachrichtenübertragungsrate
 const char *message = "HELLO"; // Die Nachricht, die gesendet werden soll
@@ -82,7 +86,9 @@ class Mp3Notify
 SoftwareSerial mySoftwareSerial(DFPLAYER_RX, DFPLAYER_TX); // RX, TX
 DFMiniMp3<SoftwareSerial, Mp3Notify> dfmp3(mySoftwareSerial);
 
+#ifndef DISABLE_MELODYPLAYER
 MelodyPlayer player(BUZZER_PIN, 1, LOW);
+#endif
 
 EasyButton button_left(BUTTON_UP_PIN);
 EasyButton button_right(BUTTON_DOWN_PIN);
@@ -252,11 +258,13 @@ void PeripheryManager_::playBootSound()
         }
         else
         {
+#ifndef DISABLE_MELODYPLAYER
             const int nNotes = 6;
             String notes[nNotes] = {"E5", "C5", "G4", "E4", "G4", "C5"};
             const int timeUnit = 150;
             Melody melody = MelodyFactory.load("Bootsound", timeUnit, notes, nNotes);
             player.playAsync(melody);
+#endif
         }
     }
     else
@@ -275,7 +283,9 @@ void PeripheryManager_::stopSound()
     }
     else
     {
+#ifndef DISABLE_MELODYPLAYER
         player.stop();
+#endif
     }
 }
 
@@ -289,8 +299,10 @@ void PeripheryManager_::setVolume(uint8_t vol)
     }
     else
     {
+#ifndef DISABLE_MELODYPLAYER
         int scaledVol = (vol * 255) / 30;
         player.setVolume(scaledVol);
+#endif
     }
 }
 
@@ -311,6 +323,7 @@ bool PeripheryManager_::parseSound(const char *json)
 
 const char *PeripheryManager_::playRTTTLString(String rtttl)
 {
+#ifndef DISABLE_MELODYPLAYER
     if (!DFPLAYER_ACTIVE && SOUND_ACTIVE)
     {
         static char melodyName[64];
@@ -320,6 +333,7 @@ const char *PeripheryManager_::playRTTTLString(String rtttl)
         melodyName[sizeof(melodyName) - 1] = '\0';
         return melodyName;
     }
+#endif
     return nullptr; // RTTTL not supported with DFPlayer
 }
 
@@ -342,6 +356,7 @@ const char *PeripheryManager_::playFromFile(String file)
     }
     else
     {
+#ifndef DISABLE_MELODYPLAYER
         if (DEBUG_MODE)
             DEBUG_PRINTLN(F("Playing RTTTL sound file"));
         if (LittleFS.exists("/MELODIES/" + String(file) + ".txt"))
@@ -353,10 +368,8 @@ const char *PeripheryManager_::playFromFile(String file)
             melodyName[sizeof(melodyName) - 1] = '\0';
             return melodyName;
         }
-        else
-        {
-            return NULL;
-        }
+#endif
+        return NULL;
     }
 }
 
@@ -371,7 +384,11 @@ bool PeripheryManager_::isPlaying()
     }
     else
     {
+#ifndef DISABLE_MELODYPLAYER
         return player.isPlaying();
+#else
+        return false;
+#endif
     }
 }
 

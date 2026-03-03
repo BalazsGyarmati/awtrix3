@@ -13,7 +13,9 @@
 #include "PowerManager.h"
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
+#ifndef DISABLE_GAMES
 #include "Games/GameManager.h"
+#endif
 #include <EEPROM.h>
 
 WiFiUDP udp;
@@ -326,8 +328,10 @@ void ServerManager_::tick()
         while (currentClient.available()) {
             char incomingByte = currentClient.read();            
             if (incomingByte == '\n') {
-                dataBuffer[bufferIndex] = '\0';               
+                dataBuffer[bufferIndex] = '\0';
+#ifndef DISABLE_GAMES
                 GameManager.ControllerInput(dataBuffer);
+#endif
                 bufferIndex = 0;
             }
             else if (incomingByte != '\r') {

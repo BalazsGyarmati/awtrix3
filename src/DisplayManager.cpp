@@ -17,12 +17,17 @@
 #include "Dictionary.h"
 #include <set>
 #include "GifPlayer.h"
+#ifndef DISABLE_ARTNET
 #include <ArtnetWifi.h>
+#endif
 #include <AwtrixFont.h>
 #include <HTTPClient.h>
 #include "base64.hpp"
+#ifndef DISABLE_GAMES
 #include "Games/GameManager.h"
+#endif
 
+#ifndef DISABLE_ARTNET
 unsigned long lastArtnetStatusTime = 0;
 const int numberOfChannels = 256 * 3;
 // Artnet settings
@@ -32,6 +37,7 @@ const int startUniverse = 0; // CHANGE FOR YOUR SETUP most software this is 1, s
 // Check if we got all universes
 const int maxUniverses = numberOfChannels / 512 + ((numberOfChannels % 512) ? 1 : 0);
 bool universesReceived[maxUniverses];
+#endif
 bool sendFrame = 1;
 int previousDataLength = 0;
 #ifdef awtrix2_upgrade
@@ -1213,13 +1219,16 @@ bool universe2_complete = false;
 
 void DisplayManager_::tick()
 {
+#ifndef DISABLE_GAMES
   if (GAME_ACTIVE)
   {
     GameManager.tick();
     matrix->show();
     memcpy(ledsCopy, leds, sizeof(leds));
   }
-  else if (AP_MODE)
+  else
+#endif
+  if (AP_MODE)
   {
     HSVtext(2, 6, "AP MODE", true, 1);
   }
@@ -1249,6 +1258,7 @@ void DisplayManager_::tick()
     }
   }
 
+#ifndef DISABLE_ARTNET
   if (!AP_MODE)
   {
     uint16_t ArtnetStatus = artnet.read();
@@ -1262,6 +1272,7 @@ void DisplayManager_::tick()
       ARTNET_MODE = false;
     }
   }
+#endif
 
   if (NEWYEAR)
     DisplayManager.checkNewYear();
@@ -1289,6 +1300,7 @@ void DisplayManager_::checkNewYear()
   }
 }
 
+#ifndef DISABLE_ARTNET
 void onDmxFrame(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t *data)
 {
   sendFrame = 1;
@@ -1335,6 +1347,12 @@ void DisplayManager_::startArtnet()
   artnet.begin();
   artnet.setArtDmxCallback(onDmxFrame);
 }
+#else
+void DisplayManager_::startArtnet()
+{
+  // Artnet disabled
+}
+#endif
 
 void DisplayManager_::clear()
 {
@@ -2096,6 +2114,7 @@ void DisplayManager_::setNewSettings(const char *json)
       return;
   }
 
+#ifndef DISABLE_GAMES
   if (doc.containsKey("GAMEMODE"))
   {
     bool gamemode = doc["GAMEMODE"];
@@ -2109,6 +2128,7 @@ void DisplayManager_::setNewSettings(const char *json)
     GameManager.ChooseGame(game);
     return;
   }
+#endif
 
   TIME_MODE = doc.containsKey("TMODE") ? doc["TMODE"].as<int>() : TIME_MODE;
   TRANS_EFFECT = doc.containsKey("TEFF") ? doc["TEFF"] : TRANS_EFFECT;
