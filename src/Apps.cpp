@@ -303,6 +303,162 @@ void TimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, 
     }
 }
 
+// Helper function to draw temperature box (same style as calendar box)
+void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
+{
+    // Get temperature value (MQTT with fallback to internal sensor)
+    float tempValue = MQTT_TEMP_AVAILABLE ? MQTT_TEMP_VALUE : CURRENT_TEMP;
+    
+    // Color based on temperature: cold (blue) < 15°C, warm (orange) >= 15°C
+    uint32_t boxColor = (tempValue < 15.0) ? TEMP_BOX_COLOR_COLD : TEMP_BOX_COLOR_WARM;
+    
+    // Draw temperature box background (same size as calendar: 9x8)
+    DisplayManager.drawFilledRect(x, y, 9, 8, boxColor);
+    
+    // Format temperature (1-2 digits, no decimal for small box)
+    int tempInt = (int)round(tempValue);
+    if (tempInt > 99) tempInt = 99;
+    if (tempInt < -9) tempInt = -9;
+    
+    char temp_str[4];
+    sprintf(temp_str, "%d", tempInt);
+    
+    // Calculate offset for centering
+    int offset;
+    if (tempInt >= 10 || tempInt <= -1)
+        offset = 1;  // 2 chars
+    else
+        offset = 3;  // 1 char
+    
+    DisplayManager.setCursor(offset + x, 7 + y);
+    DisplayManager.setTextColor(TEMP_BOX_TEXT_COLOR);
+    DisplayManager.matrixPrint(temp_str);
+}
+
+void TempTimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, int16_t y, GifPlayer *gifPlayer)
+{
+    if (notifyFlag)
+        return;
+    CURRENT_APP = "TempTime";
+    currentCustomApp = "";
+    
+    // Skip special time modes (bigtime, binary) - use regular time display
+    if (TIME_MODE == 5 || TIME_MODE == 6)
+    {
+        // For special modes, just show regular time with temp box
+        if (TIME_COLOR > 0)
+        {
+            DisplayManager.setTextColor(TIME_COLOR);
+        }
+        else
+        {
+            DisplayManager.getInstance().resetTextColor();
+        }
+        
+        char t[20];
+        const char *timeformat = getTimeFormat();
+        strftime(t, sizeof(t), timeformat, timer_localtime());
+        DisplayManager.printText(12 + x, 6 + y, t, false, 2);
+        
+        // Draw temperature box
+        drawTemperatureBox(x, y, 1);
+        
+        if (!SHOW_WEEKDAY)
+            return;
+        
+        // Week days on bottom
+        uint8_t LINE_WIDTH = 2;
+        uint8_t LINE_SPACING = 1;
+        uint8_t LINE_START = 10;
+        uint8_t dayOffset = START_ON_MONDAY ? 0 : 1;
+        for (int i = 0; i <= 6; i++)
+        {
+            int lineStart = LINE_START + i * (LINE_WIDTH + LINE_SPACING);
+            int lineEnd = lineStart + LINE_WIDTH - 1;
+            uint32_t color = (i == (timer_localtime()->tm_wday + 6 + dayOffset) % 7) ? WDC_ACTIVE : WDC_INACTIVE;
+            DisplayManager.drawLine(lineStart + x, 7 + y, lineEnd + x, 7 + y, color);
+        }
+        return;
+    }
+
+    if (TIME_COLOR > 0)
+    {
+        DisplayManager.setTextColor(TIME_COLOR);
+    }
+    else
+    {
+        DisplayManager.getInstance().resetTextColor();
+    }
+
+    const char *timeformat = getTimeFormat();
+    char t[20];
+    if (timeformat[2] == ' ')
+    {
+        // blink separator
+        char t2[20];
+        strcpy(t2, timeformat);
+        if (timer_time() % 2)
+        {
+            t2[2] = ' ';
+        }
+        else
+        {
+            t2[2] = ':';
+        }
+        strftime(t, sizeof(t), t2, timer_localtime());
+    }
+    else
+    {
+        strftime(t, sizeof(t), timeformat, timer_localtime());
+    }
+
+    int16_t wdPosY;
+    int16_t timePosY;
+    if (TIME_MODE == 2 || TIME_MODE == 4)
+    {
+        // week days on top line
+        wdPosY = 0;
+        timePosY = 7;
+    }
+    else
+    {
+        // week days on bottom line
+        wdPosY = 7;
+        timePosY = 6;
+    }
+
+    // time
+    DisplayManager.printText(12 + x, timePosY + y, t, TIME_MODE == 0, 2);
+
+    // temperature box (instead of calendar)
+    if (TIME_MODE > 0)
+    {
+        drawTemperatureBox(x, y, TIME_MODE);
+    }
+
+    if (!SHOW_WEEKDAY)
+        return;
+
+    // line of week days
+    uint8_t LINE_WIDTH = TIME_MODE > 0 ? 2 : 3;
+    uint8_t LINE_SPACING = 1;
+    uint8_t LINE_START = TIME_MODE > 0 ? 10 : 2;
+    uint8_t dayOffset = START_ON_MONDAY ? 0 : 1;
+    for (int i = 0; i <= 6; i++)
+    {
+        int lineStart = LINE_START + i * (LINE_WIDTH + LINE_SPACING);
+        int lineEnd = lineStart + LINE_WIDTH - 1;
+
+        uint32_t color;
+        if (i == (timer_localtime()->tm_wday + 6 + dayOffset) % 7)
+            color = WDC_ACTIVE; // current day
+        else
+            color = WDC_INACTIVE; // other days
+
+        DisplayManager.drawLine(lineStart + x, wdPosY + y, lineEnd + x, wdPosY + y, color);
+    }
+}
+
 void DateApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, int16_t y, GifPlayer *gifPlayer)
 {
     if (notifyFlag)

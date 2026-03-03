@@ -1107,15 +1107,16 @@ void DisplayManager_::loadNativeApps()
   };
 
   updateApp("Time", TimeApp, SHOW_TIME, 0);
-  updateApp("Date", DateApp, SHOW_DATE, 1);
+  updateApp("TempTime", TempTimeApp, SHOW_TEMPTIME, 1);
+  updateApp("Date", DateApp, SHOW_DATE, 2);
 
   if (SENSOR_READING)
   {
-    updateApp("Temperature", TempApp, SHOW_TEMP, 2);
-    updateApp("Humidity", HumApp, SHOW_HUM, 3);
+    updateApp("Temperature", TempApp, SHOW_TEMP, 3);
+    updateApp("Humidity", HumApp, SHOW_HUM, 4);
   }
 #ifdef ULANZI
-  updateApp("Battery", BatApp, SHOW_BAT, 4);
+  updateApp("Battery", BatApp, SHOW_BAT, 5);
 #endif
 
   ui->setApps(Apps);
@@ -2071,12 +2072,18 @@ String DisplayManager_::getSettings()
   doc["BAT_COL"] = BAT_COLOR;
   doc["SSPEED"] = SCROLL_SPEED;
   doc["TIM"] = SHOW_TIME;
+  doc["TTIM"] = SHOW_TEMPTIME;
   doc["DAT"] = SHOW_DATE;
   doc["HUM"] = SHOW_HUM;
   doc["TEMP"] = SHOW_TEMP;
   doc["BAT"] = SHOW_BAT;
   doc["VOL"] = SOUND_VOLUME;
   doc["OVERLAY"] = getOverlayName();
+  doc["MQTTTMP"] = MQTT_TEMP_TOPIC;
+  doc["TCTTOG"] = TIME_CAL_TEMP_TOGGLE;
+  doc["TBCOLD"] = TEMP_BOX_COLOR_COLD;
+  doc["TBWARM"] = TEMP_BOX_COLOR_WARM;
+  doc["TBTCOL"] = TEMP_BOX_TEXT_COLOR;
   String jsonString;
   return serializeJson(doc, jsonString), jsonString;
 }
@@ -2147,6 +2154,7 @@ void DisplayManager_::setNewSettings(const char *json)
   SHOW_WEEKDAY = doc.containsKey("WD") ? doc["WD"].as<bool>() : SHOW_WEEKDAY;
   BLOCK_NAVIGATION = doc.containsKey("BLOCKN") ? doc["BLOCKN"].as<bool>() : BLOCK_NAVIGATION;
   SHOW_TIME = doc.containsKey("TIM") ? doc["TIM"].as<bool>() : SHOW_TIME;
+  SHOW_TEMPTIME = doc.containsKey("TTIM") ? doc["TTIM"].as<bool>() : SHOW_TEMPTIME;
   SHOW_DATE = doc.containsKey("DAT") ? doc["DAT"].as<bool>() : SHOW_DATE;
   SHOW_HUM = doc.containsKey("HUM") ? doc["HUM"].as<bool>() : SHOW_HUM;
   SHOW_TEMP = doc.containsKey("TEMP") ? doc["TEMP"].as<bool>() : SHOW_TEMP;
@@ -2266,6 +2274,29 @@ void DisplayManager_::setNewSettings(const char *json)
   {
     auto BAT_COL = doc["BAT_COL"];
     BAT_COLOR = getColorFromJsonVariant(BAT_COL, TEXTCOLOR_888);
+  }
+  if (doc.containsKey("MQTTTMP"))
+  {
+    MQTT_TEMP_TOPIC = doc["MQTTTMP"].as<String>();
+  }
+  if (doc.containsKey("TCTTOG"))
+  {
+    TIME_CAL_TEMP_TOGGLE = doc["TCTTOG"].as<bool>();
+  }
+  if (doc.containsKey("TBCOLD"))
+  {
+    auto TBCOLD = doc["TBCOLD"];
+    TEMP_BOX_COLOR_COLD = getColorFromJsonVariant(TBCOLD, 0x0066FF);
+  }
+  if (doc.containsKey("TBWARM"))
+  {
+    auto TBWARM = doc["TBWARM"];
+    TEMP_BOX_COLOR_WARM = getColorFromJsonVariant(TBWARM, 0xFF6600);
+  }
+  if (doc.containsKey("TBTCOL"))
+  {
+    auto TBTCOL = doc["TBTCOL"];
+    TEMP_BOX_TEXT_COLOR = getColorFromJsonVariant(TBTCOL, 0x000000);
   }
   doc.clear();
   applyAllSettings();

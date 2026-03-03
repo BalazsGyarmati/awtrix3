@@ -198,6 +198,16 @@ void processMqttMessage(const String &strTopic, const String &payloadCopy)
         return;
     }
 
+    // Handle external temperature from MQTT (<prefix>/temperature)
+    if (strTopic.equals(MQTT_PREFIX + "/temperature"))
+    {
+        MQTT_TEMP_VALUE = payloadCopy.toFloat();
+        MQTT_TEMP_AVAILABLE = true;
+        if (DEBUG_MODE)
+            DEBUG_PRINTF("MQTT Temperature received: %.1f", MQTT_TEMP_VALUE);
+        return;
+    }
+
     if (strTopic.startsWith(MQTT_PREFIX + "/custom"))
     {
         String topic_str = strTopic;
@@ -420,6 +430,12 @@ void onMqttConnected()
         if (DEBUG_MODE)
             Serial.printf("Subscribed to topic %s\n", topic.c_str());
     }
+
+    // Subscribe to temperature topic (<prefix>/temperature)
+    String tempTopic = MQTT_PREFIX + "/temperature";
+    mqtt->subscribe(tempTopic.c_str());
+    if (DEBUG_MODE)
+        Serial.printf("Subscribed to temperature topic %s\n", tempTopic.c_str());
 
     delay(200);
     if (HA_DISCOVERY)

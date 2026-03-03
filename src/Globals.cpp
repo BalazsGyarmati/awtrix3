@@ -280,6 +280,7 @@ void loadSettings()
     BLOCK_NAVIGATION = Settings.getBool("BLOCKN", false);
     IS_CELSIUS = Settings.getBool("CEL", true);
     SHOW_TIME = Settings.getBool("TIM", true);
+    SHOW_TEMPTIME = Settings.getBool("TTIM", false);
     SHOW_DATE = Settings.getBool("DAT", false);
     SHOW_TEMP = Settings.getBool("TEMP", true);
     SHOW_HUM = Settings.getBool("HUM", true);
@@ -290,6 +291,11 @@ void loadSettings()
 #endif
     SOUND_ACTIVE = Settings.getBool("SOUND", true);
     SOUND_VOLUME = Settings.getUInt("VOL", 25);
+    MQTT_TEMP_TOPIC = Settings.getString("MQTTTMP", "");
+    TIME_CAL_TEMP_TOGGLE = Settings.getBool("TCTTOG", false);
+    TEMP_BOX_COLOR_COLD = Settings.getUInt("TBCOLD", 0x0066FF);
+    TEMP_BOX_COLOR_WARM = Settings.getUInt("TBWARM", 0xFF6600);
+    TEMP_BOX_TEXT_COLOR = Settings.getUInt("TBTCOL", 0x000000);
     Settings.end();
     uniqueID = getID();
     MQTT_PREFIX = String(uniqueID);
@@ -330,6 +336,7 @@ void saveSettings()
     Settings.putBool("SOM", START_ON_MONDAY);
     Settings.putBool("CEL", IS_CELSIUS);
     Settings.putBool("TIM", SHOW_TIME);
+    Settings.putBool("TTIM", SHOW_TEMPTIME);
     Settings.putBool("DAT", SHOW_DATE);
     Settings.putBool("TEMP", SHOW_TEMP);
     Settings.putBool("HUM", SHOW_HUM);
@@ -339,6 +346,11 @@ void saveSettings()
 #endif
     Settings.putBool("SOUND", SOUND_ACTIVE);
     Settings.putUInt("VOL", SOUND_VOLUME);
+    Settings.putString("MQTTTMP", MQTT_TEMP_TOPIC);
+    Settings.putBool("TCTTOG", TIME_CAL_TEMP_TOGGLE);
+    Settings.putUInt("TBCOLD", TEMP_BOX_COLOR_COLD);
+    Settings.putUInt("TBWARM", TEMP_BOX_COLOR_WARM);
+    Settings.putUInt("TBTCOL", TEMP_BOX_TEXT_COLOR);
     Settings.end();
 }
 
@@ -348,7 +360,7 @@ IPAddress gateway;
 IPAddress subnet;
 IPAddress primaryDNS;
 IPAddress secondaryDNS;
-const char *VERSION = "0.98.1";
+const char *VERSION = "0.98.2";
 String MQTT_HOST = "";
 uint16_t MQTT_PORT = 1883;
 String MQTT_USER;
@@ -358,6 +370,7 @@ bool MQTT_TLS = false;
 bool IO_BROKER = false;
 bool NET_STATIC = false;
 bool SHOW_TIME = true;
+bool SHOW_TEMPTIME = false;
 bool SHOW_DATE = true;
 bool SHOW_WEATHER = true;
 bool SHOW_BAT = true;
@@ -455,6 +468,13 @@ String AUTH_PASS = "awtrix";
 String BUTTON_CALLBACK = "";
 bool NEWYEAR = false;
 bool SWAP_BUTTONS = false;
+String MQTT_TEMP_TOPIC = "";
+float MQTT_TEMP_VALUE = 0.0;
+bool MQTT_TEMP_AVAILABLE = false;
+bool TIME_CAL_TEMP_TOGGLE = false;
+uint32_t TEMP_BOX_COLOR_COLD = 0x0066FF;
+uint32_t TEMP_BOX_COLOR_WARM = 0xFF6600;
+uint32_t TEMP_BOX_TEXT_COLOR = 0x000000;
 bool LDR_ON_GROUND = false;
 float LDR_GAMMA = 3.0;
 float LDR_FACTOR = 1.0;
