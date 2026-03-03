@@ -303,36 +303,104 @@ void TimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, 
     }
 }
 
-// Helper function to draw temperature box (same style as calendar box)
+// Helper function to get temperature color based on gradient
+uint32_t getTempColor(float temp)
+{
+    if (temp < 0)
+        return 0xFFFFFF;  // white (below 0°C)
+    else if (temp < 10)
+        return 0x0000FF;  // deep blue (0-10°C)
+    else if (temp < 19)
+        return 0x00BFFF;  // light blue (10-18°C)
+    else if (temp < 27)
+        return 0x00FF00;  // green (19-26°C)
+    else if (temp < 32)
+        return 0xFF8C00;  // orange (27-32°C)
+    else
+        return 0xFF0000;  // red (32°C+)
+}
+
+// Helper function to draw temperature display with gauge bar
 void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
 {
     // Get temperature value (MQTT with fallback to internal sensor)
     float tempValue = MQTT_TEMP_AVAILABLE ? MQTT_TEMP_VALUE : CURRENT_TEMP;
     
-    // Color based on temperature: cold (blue) < 15°C, warm (orange) >= 15°C
-    uint32_t boxColor = (tempValue < 15.0) ? TEMP_BOX_COLOR_COLD : TEMP_BOX_COLOR_WARM;
-    
-    // Draw temperature box background (same size as calendar: 9x8)
-    DisplayManager.drawFilledRect(x, y, 9, 8, boxColor);
-    
-    // Format temperature (1-2 digits, no decimal for small box)
     int tempInt = (int)round(tempValue);
     if (tempInt > 99) tempInt = 99;
-    if (tempInt < -9) tempInt = -9;
+    if (tempInt < -99) tempInt = -99;
     
-    char temp_str[4];
-    sprintf(temp_str, "%d", tempInt);
+    // Get color based on temperature gradient (same for text and gauge)
+    uint32_t tempColor = getTempColor(tempValue);
     
-    // Calculate offset for centering
-    int offset;
-    if (tempInt >= 10 || tempInt <= -1)
-        offset = 1;  // 2 chars
+    // Draw gauge bar on top line (9 pixels wide, 1 pixel height)
+    // Below 0 = 1px white, 0-32 = 1-9 colored pixels, 32+ = 9 red pixels
+    int fillPixels;
+    if (tempInt < 0)
+        fillPixels = 1;
+    else if (tempInt >= 32)
+        fillPixels = 9;
     else
-        offset = 3;  // 1 char
+        fillPixels = 1 + (tempInt * 8 / 32);  // 1-9 pixels for 0-32°C
     
-    DisplayManager.setCursor(offset + x, 7 + y);
-    DisplayManager.setTextColor(TEMP_BOX_TEXT_COLOR);
+    uint32_t grayColor = 0x666666;
+    for (int i = 0; i < 9; i++)
+    {
+        if (i < fillPixels)
+            DisplayManager.drawPixel(i + x, y, tempColor);
+        else
+            DisplayManager.drawPixel(i + x, y, grayColor);
+    }
+    
+    // Format temperature - use absolute value and draw minus separately
+    char temp_str[4];
+    int offset;
+    int absTemp = (tempInt < 0) ? -tempInt : tempInt;
+    
+    if (absTemp < 10)
+    {
+        // Single digit: center it
+        sprintf(temp_str, "%d", absTemp);
+        offset = 3;
+    }
+    else
+    {
+        // Double digit: left align
+        sprintf(temp_str, "%d", absTemp);
+        offset = 1;
+    }
+    
+    // Draw minus sign for negative temps
+    if (tempInt < 0)
+    {
+        if (absTemp < 10)
+        {
+            // -1 to -9: 2px wide minus sign, 1px gap to number
+            DisplayManager.drawLine(x, 5 + y, x + 1, 5 + y, tempColor);
+            offset += 1;  // reduced from 2 to 1 for tighter spacing
+        }
+        else
+        {
+            // -10 and below: 1px wide minus sign
+            DisplayManager.drawPixel(x, 5 + y, tempColor);
+            offset += 1;
+        }
+    }
+    
+    // Position text 1px lower (y+8 instead of y+7)
+    DisplayManager.setCursor(offset + x, 8 + y);
+    DisplayManager.setTextColor(tempColor);
     DisplayManager.matrixPrint(temp_str);
+    
+    // Draw degree symbol as single pixel after the number
+    int degreeX;
+    if (absTemp < 10)
+        degreeX = offset + 4;  // after single digit
+    else
+        degreeX = offset + 7;  // after double digit
+    
+    // Always show degree symbol
+    DisplayManager.drawPixel(degreeX + x, 2 + y, tempColor);
 }
 
 void TempTimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, int16_t y, GifPlayer *gifPlayer)
