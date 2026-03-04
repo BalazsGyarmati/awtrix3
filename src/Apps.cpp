@@ -333,25 +333,6 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
     // Get color based on temperature gradient (same for text and gauge)
     uint32_t tempColor = getTempColor(tempValue);
     
-    // Draw gauge bar on top line (9 pixels wide, 1 pixel height)
-    // Below 0 = 1px white, 0-32 = 1-9 colored pixels, 32+ = 9 red pixels
-    int fillPixels;
-    if (tempInt < 0)
-        fillPixels = 1;
-    else if (tempInt >= 32)
-        fillPixels = 9;
-    else
-        fillPixels = 1 + (tempInt * 8 / 32);  // 1-9 pixels for 0-32°C
-    
-    uint32_t grayColor = 0x666666;
-    for (int i = 0; i < 9; i++)
-    {
-        if (i < fillPixels)
-            DisplayManager.drawPixel(i + x, y, tempColor);
-        else
-            DisplayManager.drawPixel(i + x, y, grayColor);
-    }
-    
     // Format temperature - use absolute value and draw minus separately
     char temp_str[4];
     int offset;
@@ -376,19 +357,19 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
         if (absTemp < 10)
         {
             // -1 to -9: 2px wide minus sign, 1px gap to number
-            DisplayManager.drawLine(x, 5 + y, x + 1, 5 + y, tempColor);
-            offset += 1;  // reduced from 2 to 1 for tighter spacing
+            DisplayManager.drawLine(x, 4 + y, x + 1, 4 + y, tempColor);
+            offset += 1;
         }
         else
         {
             // -10 and below: 1px wide minus sign
-            DisplayManager.drawPixel(x, 5 + y, tempColor);
+            DisplayManager.drawPixel(x, 4 + y, tempColor);
             offset += 1;
         }
     }
     
-    // Position text 1px lower (y+8 instead of y+7)
-    DisplayManager.setCursor(offset + x, 8 + y);
+    // Position text on top (y+6 for baseline)
+    DisplayManager.setCursor(offset + x, 6 + y);
     DisplayManager.setTextColor(tempColor);
     DisplayManager.matrixPrint(temp_str);
     
@@ -399,8 +380,27 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
     else
         degreeX = offset + 7;  // after double digit
     
-    // Always show degree symbol
-    DisplayManager.drawPixel(degreeX + x, 2 + y, tempColor);
+    // Degree symbol on top line
+    DisplayManager.drawPixel(degreeX + x, y, tempColor);
+    
+    // Draw gauge bar on bottom line (9 pixels wide, 1 pixel height)
+    // Below 0 = 1px white, 0-32 = 1-9 colored pixels, 32+ = 9 red pixels
+    int fillPixels;
+    if (tempInt < 0)
+        fillPixels = 1;
+    else if (tempInt >= 32)
+        fillPixels = 9;
+    else
+        fillPixels = 1 + (tempInt * 8 / 32);  // 1-9 pixels for 0-32°C
+    
+    uint32_t grayColor = 0x666666;
+    for (int i = 0; i < 9; i++)
+    {
+        if (i < fillPixels)
+            DisplayManager.drawPixel(i + x, 7 + y, tempColor);
+        else
+            DisplayManager.drawPixel(i + x, 7 + y, grayColor);
+    }
 }
 
 void TempTimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, int16_t y, GifPlayer *gifPlayer)
