@@ -64,42 +64,34 @@ void UpdateManager_::updateFirmware(const String &customUrl)
     httpUpdate.onEnd(update_finished);
     httpUpdate.onProgress(update_progress);
     httpUpdate.onError(update_error);
+    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
     String firmwareUrl = (customUrl.length() > 0) ? customUrl : String(URL_fw_Bin);
     if (DEBUG_MODE) DEBUG_PRINTF("Updating firmware from: %s\n", firmwareUrl.c_str());
 
+    t_httpUpdate_return ret;
+    
     if (customUrl.length() > 0 && customUrl.startsWith("http://"))
     {
         WiFiClient insecureClient;
-        t_httpUpdate_return ret = httpUpdate.update(insecureClient, firmwareUrl);
-        switch (ret)
-        {
-        case HTTP_UPDATE_FAILED:
-            if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-            break;
-        case HTTP_UPDATE_NO_UPDATES:
-            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
-            break;
-        case HTTP_UPDATE_OK:
-            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
-            break;
-        }
+        ret = httpUpdate.update(insecureClient, firmwareUrl);
     }
     else
     {
-        t_httpUpdate_return ret = httpUpdate.update(client, firmwareUrl);
-        switch (ret)
-        {
-        case HTTP_UPDATE_FAILED:
-            if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-            break;
-        case HTTP_UPDATE_NO_UPDATES:
-            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
-            break;
-        case HTTP_UPDATE_OK:
-            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
-            break;
-        }
+        ret = httpUpdate.update(client, firmwareUrl);
+    }
+
+    switch (ret)
+    {
+    case HTTP_UPDATE_FAILED:
+        if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        break;
+    case HTTP_UPDATE_NO_UPDATES:
+        if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
+        break;
+    case HTTP_UPDATE_OK:
+        if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
+        break;
     }
 }
 
