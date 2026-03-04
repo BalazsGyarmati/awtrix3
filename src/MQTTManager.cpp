@@ -71,8 +71,10 @@ void processMqttMessage(const String &strTopic, const String &payloadCopy)
     {
         String customUrl = payloadCopy;
         customUrl.trim();
+        Serial.printf("doupdate received, payload length: %d\n", customUrl.length());
         if (customUrl.length() > 0)
         {
+            Serial.printf("Updating from custom URL: %s\n", customUrl.c_str());
             UpdateManager.updateFirmware(customUrl);
         }
         else if (UpdateManager.checkUpdate(true))
