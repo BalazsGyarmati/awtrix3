@@ -69,7 +69,13 @@ void processMqttMessage(const String &strTopic, const String &payloadCopy)
 
     if (strTopic.equals(MQTT_PREFIX + "/doupdate"))
     {
-        if (UpdateManager.checkUpdate(true))
+        String customUrl = payloadCopy;
+        customUrl.trim();
+        if (customUrl.length() > 0)
+        {
+            UpdateManager.updateFirmware(customUrl);
+        }
+        else if (UpdateManager.checkUpdate(true))
         {
             UpdateManager.updateFirmware();
         }
@@ -441,7 +447,7 @@ void onMqttConnected()
     if (HA_DISCOVERY)
     {
         myOwnID->setValue(MQTT_PREFIX.c_str());
-        version->setValue(VERSION);
+        version->setValue(VERSION_STR);
     }
 
     MQTTManager.publish("stats/effects", DisplayManager.getEffectNames().c_str());
@@ -586,7 +592,7 @@ void MQTTManager_::setup()
         snprintf(macStr, 7, "%02x%02x%02x", mac[3], mac[4], mac[5]);
         device.setUniqueId(mac, sizeof(mac));
         device.setName(HOSTNAME.c_str());
-        device.setSoftwareVersion(VERSION);
+        device.setSoftwareVersion(VERSION_STR);
         device.setManufacturer(HAmanufacturer);
 
         device.setModel(HAmodel);

@@ -55,7 +55,7 @@ void update_error(int err)
     DisplayManager.show();
 }
 
-void UpdateManager_::updateFirmware()
+void UpdateManager_::updateFirmware(const String &customUrl)
 {
     WiFiClientSecure client;
     client.setCACert(rootCACertificate);
@@ -65,20 +65,41 @@ void UpdateManager_::updateFirmware()
     httpUpdate.onProgress(update_progress);
     httpUpdate.onError(update_error);
 
-    t_httpUpdate_return ret = httpUpdate.update(client, URL_fw_Bin);
-    switch (ret)
+    String firmwareUrl = (customUrl.length() > 0) ? customUrl : String(URL_fw_Bin);
+    if (DEBUG_MODE) DEBUG_PRINTF("Updating firmware from: %s\n", firmwareUrl.c_str());
+
+    if (customUrl.length() > 0 && customUrl.startsWith("http://"))
     {
-    case HTTP_UPDATE_FAILED:
-        if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-        break;
-
-    case HTTP_UPDATE_NO_UPDATES:
-        if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
-        break;
-
-    case HTTP_UPDATE_OK:
-        if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
-        break;
+        WiFiClient insecureClient;
+        t_httpUpdate_return ret = httpUpdate.update(insecureClient, firmwareUrl);
+        switch (ret)
+        {
+        case HTTP_UPDATE_FAILED:
+            if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+            break;
+        case HTTP_UPDATE_NO_UPDATES:
+            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
+            break;
+        case HTTP_UPDATE_OK:
+            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
+            break;
+        }
+    }
+    else
+    {
+        t_httpUpdate_return ret = httpUpdate.update(client, firmwareUrl);
+        switch (ret)
+        {
+        case HTTP_UPDATE_FAILED:
+            if (DEBUG_MODE) DEBUG_PRINTF("HTTP_UPDATE_FAILED Error (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+            break;
+        case HTTP_UPDATE_NO_UPDATES:
+            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_NO_UPDATES"));
+            break;
+        case HTTP_UPDATE_OK:
+            if (DEBUG_MODE) DEBUG_PRINTLN(F("HTTP_UPDATE_OK"));
+            break;
+        }
     }
 }
 
@@ -132,10 +153,10 @@ bool UpdateManager_::checkUpdate(bool withScreen)
     if (httpCode == HTTP_CODE_OK) // if version received
     {
         payload.trim();
-        if (payload.equals(VERSION))
+        if (payload.equals(VERSION_STR))
         {
             UPDATE_AVAILABLE = false;
-            if (DEBUG_MODE) DEBUG_PRINTF("\nDevice already on latest firmware version: %s\n", VERSION);
+            if (DEBUG_MODE) DEBUG_PRINTF("\nDevice already on latest firmware version: %s\n", VERSION_STR);
             if (withScreen)
             {
                 DisplayManager.clear();

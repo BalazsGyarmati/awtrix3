@@ -11,7 +11,7 @@ public:
     static UpdateManager_ &getInstance();
     void setup();
     bool checkUpdate(bool); 
-    void updateFirmware(); 
+    void updateFirmware(const String &customUrl = ""); 
 };
 
 extern UpdateManager_ &UpdateManager;

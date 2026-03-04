@@ -49,7 +49,7 @@ ServerManager_ &ServerManager = ServerManager.getInstance();
 void versionHandler()
 {
     WebServerClass *webRequest = mws.getRequest();
-    webRequest->send(200, F("text/plain"), VERSION);
+    webRequest->send(200, F("text/plain"), VERSION_STR);
 }
 
 void ServerManager_::erase()

@@ -30,7 +30,7 @@
 
 void formatSettings();
 extern const char *uniqueID;
-extern const char *VERSION;
+extern const char *VERSION_STR;
 extern IPAddress local_IP;
 extern IPAddress gateway;
 extern IPAddress subnet;

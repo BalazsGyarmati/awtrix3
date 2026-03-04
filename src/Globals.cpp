@@ -360,7 +360,10 @@ IPAddress gateway;
 IPAddress subnet;
 IPAddress primaryDNS;
 IPAddress secondaryDNS;
-const char *VERSION = "0.98.2";
+#ifndef VERSION
+#define VERSION "0.0.0"
+#endif
+const char *VERSION_STR = VERSION;
 String MQTT_HOST = "";
 uint16_t MQTT_PORT = 1883;
 String MQTT_USER;
