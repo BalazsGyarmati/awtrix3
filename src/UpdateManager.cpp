@@ -64,7 +64,6 @@ void UpdateManager_::updateFirmware(const String &customUrl)
     httpUpdate.onEnd(update_finished);
     httpUpdate.onProgress(update_progress);
     httpUpdate.onError(update_error);
-    httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
     String firmwareUrl = (customUrl.length() > 0) ? customUrl : String(URL_fw_Bin);
     if (DEBUG_MODE) DEBUG_PRINTF("Updating firmware from: %s\n", firmwareUrl.c_str());
