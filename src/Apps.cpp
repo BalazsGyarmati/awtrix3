@@ -303,6 +303,126 @@ void TimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, 
     }
 }
 
+// ######## Flame effect for the temperature box ########
+// Above FLAME_MIN_TEMP the 9x8 temperature box turns into a fire instead of being
+// painted in a flat red. A noise field provides the heat: the digits take their color
+// from it (so they flicker between orange, yellow and white), the free pixels around
+// them show a dimmed, red-only version of the same fire, and background pixels that are
+// enclosed by glyph strokes are forced black so the number stays readable.
+#define FLAME_MIN_TEMP 35  // °C, uses the rounded value that is shown on the display
+#define FLAME_W 9
+#define FLAME_H 8
+#define FLAME_TICK_MS 45     // animation step, decoupled from the app draw rate
+#define FLAME_XSCALE 70      // noise scale across the box
+#define FLAME_YSCALE 55      // noise scale along the box
+#define FLAME_SPEED 26       // how fast the flames rise
+#define FLAME_FALLOFF 26     // heat lost per row towards the top
+#define FLAME_GAIN 200       // overall heat amount
+#define FLAME_INK_FLOOR 130  // digits never get darker than this palette index
+#define FLAME_BG_CAP 170     // keeps the background in the red part of the palette
+#define FLAME_BG_SCALE 105   // background brightness
+
+static uint8_t flameHeat[FLAME_W][FLAME_H];
+static uint16_t flameNoiseTime = 0;
+static uint32_t flameLastTick = 0;
+static uint16_t flameInk[FLAME_H];   // digit pixels
+static uint16_t flameGuard[FLAME_H]; // background pixels that must stay black
+static int flameMaskTemp = INT16_MIN;
+
+static inline bool flameIsInk(int8_t c, int8_t r)
+{
+    return c >= 0 && c < FLAME_W && r >= 0 && r < FLAME_H && (flameInk[r] & (1 << c));
+}
+
+// Builds the ink and guard masks for the currently displayed value. Only recalculated
+// when the shown temperature changes.
+static void flameBuildMasks(int tempInt, const char *tempStr, int textX, int degreeX, int minusX, int minusW)
+{
+    if (tempInt == flameMaskTemp)
+        return;
+    flameMaskTemp = tempInt;
+
+    memset(flameInk, 0, sizeof(flameInk));
+    DisplayManager.getTextMask(textX, 6, tempStr, flameInk, FLAME_H, FLAME_W);
+
+    if (degreeX >= 0 && degreeX < FLAME_W)
+        flameInk[0] |= (1 << degreeX);
+
+    for (int i = 0; i < minusW; i++)
+    {
+        if (minusX + i >= 0 && minusX + i < FLAME_W)
+            flameInk[4] |= (1 << (minusX + i));
+    }
+
+    for (int8_t r = 0; r < FLAME_H; r++)
+    {
+        flameGuard[r] = 0;
+        for (int8_t c = 0; c < FLAME_W; c++)
+        {
+            if (flameIsInk(c, r))
+                continue;
+            // A background pixel that has ink on both sides is either a hole inside a
+            // glyph or the gap between two digits - lighting it up would blur the number.
+            bool horizontal = flameIsInk(c - 1, r) && flameIsInk(c + 1, r);
+            bool vertical = flameIsInk(c, r - 1) && flameIsInk(c, r + 1);
+            if (horizontal || vertical)
+                flameGuard[r] |= (1 << c);
+        }
+    }
+}
+
+// Advances the fire. Time based on purpose: during app transitions the app callback runs
+// twice per frame, so a per-call step would make the flames run at double speed.
+static void flameTick(uint8_t intensity)
+{
+    uint32_t now = millis();
+    if (now - flameLastTick < FLAME_TICK_MS)
+        return;
+    flameLastTick = now;
+
+    flameNoiseTime += FLAME_SPEED + (intensity >> 4);
+    uint8_t gain = qadd8(FLAME_GAIN, intensity >> 2);
+
+    for (uint8_t c = 0; c < FLAME_W; c++)
+    {
+        for (uint8_t r = 0; r < FLAME_H; r++)
+        {
+            uint8_t heat = inoise8(c * FLAME_XSCALE, r * FLAME_YSCALE + flameNoiseTime);
+            heat = scale8(heat, gain);
+            flameHeat[c][r] = qsub8(heat, (FLAME_H - 1 - r) * FLAME_FALLOFF);
+        }
+    }
+}
+
+static void flameRender(int16_t x, int16_t y)
+{
+    for (uint8_t r = 0; r < FLAME_H; r++)
+    {
+        for (uint8_t c = 0; c < FLAME_W; c++)
+        {
+            uint8_t heat = flameHeat[c][r];
+            CRGB color;
+
+            if (flameInk[r] & (1 << c))
+            {
+                color = ColorFromPalette(HeatColors_p, FLAME_INK_FLOOR + scale8(heat, 255 - FLAME_INK_FLOOR), 255, LINEARBLEND);
+            }
+            else if (flameGuard[r] & (1 << c))
+            {
+                continue; // stays black
+            }
+            else
+            {
+                color = ColorFromPalette(HeatColors_p, scale8(heat, FLAME_BG_CAP), FLAME_BG_SCALE, LINEARBLEND);
+                if (!color.r && !color.g && !color.b)
+                    continue;
+            }
+
+            DisplayManager.drawPixel(x + c, y + r, ((uint32_t)color.r << 16) | ((uint32_t)color.g << 8) | color.b);
+        }
+    }
+}
+
 // Helper function to get temperature color based on gradient
 uint32_t getTempColor(float temp)
 {
@@ -337,7 +457,7 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
     char temp_str[4];
     int offset;
     int absTemp = (tempInt < 0) ? -tempInt : tempInt;
-    
+
     if (absTemp < 10)
     {
         // Single digit: center it
@@ -350,37 +470,45 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
         sprintf(temp_str, "%d", absTemp);
         offset = 1;
     }
-    
-    // Draw minus sign for negative temps
+
+    // Minus sign for negative temps: 2px wide below -10, 1px otherwise
+    int minusX = -1;
+    int minusW = 0;
     if (tempInt < 0)
     {
-        if (absTemp < 10)
-        {
-            // -1 to -9: 2px wide minus sign, 1px gap to number
-            DisplayManager.drawLine(x, 4 + y, x + 1, 4 + y, tempColor);
-            offset += 1;
-        }
-        else
-        {
-            // -10 and below: 1px wide minus sign
-            DisplayManager.drawPixel(x, 4 + y, tempColor);
-            offset += 1;
-        }
+        minusX = 0;
+        minusW = (absTemp < 10) ? 2 : 1;
+        offset += 1;
     }
-    
+
+    // Degree symbol position (single pixel after the number)
+    int degreeX = (absTemp < 10) ? offset + 4 : offset + 7;
+
+    // Hot enough for the flame effect: the whole box burns instead of the flat red
+    // number plus gauge bar (the bar is saturated above 32°C anyway).
+    if (tempInt >= FLAME_MIN_TEMP)
+    {
+        flameBuildMasks(tempInt, temp_str, offset, degreeX, minusX, minusW);
+        flameTick(constrain((tempInt - FLAME_MIN_TEMP) * 32, 0, 255));
+        flameRender(x, y);
+        return;
+    }
+
+    // Draw minus sign for negative temps
+    if (minusW > 0)
+    {
+        if (minusW == 2)
+            DisplayManager.drawLine(x + minusX, 4 + y, x + minusX + 1, 4 + y, tempColor);
+        else
+            DisplayManager.drawPixel(x + minusX, 4 + y, tempColor);
+    }
+
     // Position text on top (y+6 for baseline)
     DisplayManager.setCursor(offset + x, 6 + y);
     DisplayManager.setTextColor(tempColor);
     DisplayManager.matrixPrint(temp_str);
     
-    // Draw degree symbol as single pixel after the number
-    int degreeX;
-    if (absTemp < 10)
-        degreeX = offset + 4;  // after single digit
-    else
-        degreeX = offset + 7;  // after double digit
-    
-    // Degree symbol on top line
+    // Degree symbol as single pixel after the number, on the top line
     DisplayManager.drawPixel(degreeX + x, y, tempColor);
     
     // Draw gauge bar on bottom line (9 pixels wide, 1 pixel height)

@@ -2740,6 +2740,50 @@ void DisplayManager_::fillCircle(int16_t x0, int16_t y0, int16_t r, uint32_t col
   }
 }
 
+// Collects the pixels the given text would light up when printed at (x, y) into a
+// bitmask (one uint16_t per row, bit n = column n). Same glyph walk as matrixPrint,
+// but nothing is drawn and the cursor is left alone.
+void DisplayManager_::getTextMask(int16_t x, int16_t y, const char *str, uint16_t *rowMask, uint8_t rows, uint8_t cols)
+{
+  int16_t cx = x;
+  while (*str)
+  {
+    char c = *str++;
+    if (c < AwtrixFont.first || c > AwtrixFont.last)
+      continue;
+
+    GFXglyph *glyph = &AwtrixFont.glyph[c - (uint8_t)AwtrixFont.first];
+    uint8_t *bitmap = AwtrixFont.bitmap;
+    uint16_t bo = glyph->bitmapOffset;
+    uint8_t w = glyph->width,
+            h = glyph->height;
+    int8_t xo = glyph->xOffset,
+           yo = glyph->yOffset;
+
+    uint8_t xx, yy, bits = 0, bit = 0;
+    for (yy = 0; yy < h; yy++)
+    {
+      for (xx = 0; xx < w; xx++)
+      {
+        if (!(bit++ & 7))
+        {
+          bits = pgm_read_byte(&bitmap[bo++]);
+        }
+        if (bits & 0x80)
+        {
+          int16_t px = cx + xo + xx;
+          int16_t py = y + yo + yy;
+          if (px >= 0 && px < cols && py >= 0 && py < rows)
+            rowMask[py] |= (1 << px);
+        }
+        bits <<= 1;
+      }
+    }
+
+    cx += glyph->xAdvance;
+  }
+}
+
 void DisplayManager_::matrixPrint(char c)
 {
   if (c == '\n')

@@ -98,6 +98,7 @@ public:
     void matrixPrint(char str[], size_t length);
     void setCursor(int16_t x, int16_t y);
     void setTextColor(uint32_t color);
+    void getTextMask(int16_t x, int16_t y, const char *str, uint16_t *rowMask, uint8_t rows, uint8_t cols);
     void matrixPrint(double number, uint8_t digits);
     void setCustomAppColors(uint32_t color);
 };
