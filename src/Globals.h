@@ -46,6 +46,8 @@ extern bool IO_BROKER;
 extern bool NET_STATIC;
 extern bool SHOW_TIME;
 extern bool SHOW_TEMPTIME;
+extern bool TEMP_FLAME;
+extern uint8_t TEMP_FLAME_MIN;
 extern bool SHOW_DATE;
 extern bool SHOW_WEATHER;
 extern bool SHOW_BAT;

@@ -281,6 +281,8 @@ void loadSettings()
     IS_CELSIUS = Settings.getBool("CEL", true);
     SHOW_TIME = Settings.getBool("TIM", true);
     SHOW_TEMPTIME = Settings.getBool("TTIM", false);
+    TEMP_FLAME = Settings.getBool("TFLM", true);
+    TEMP_FLAME_MIN = Settings.getUChar("TFLT", 35);
     SHOW_DATE = Settings.getBool("DAT", false);
     SHOW_TEMP = Settings.getBool("TEMP", true);
     SHOW_HUM = Settings.getBool("HUM", true);
@@ -337,6 +339,8 @@ void saveSettings()
     Settings.putBool("CEL", IS_CELSIUS);
     Settings.putBool("TIM", SHOW_TIME);
     Settings.putBool("TTIM", SHOW_TEMPTIME);
+    Settings.putBool("TFLM", TEMP_FLAME);
+    Settings.putUChar("TFLT", TEMP_FLAME_MIN);
     Settings.putBool("DAT", SHOW_DATE);
     Settings.putBool("TEMP", SHOW_TEMP);
     Settings.putBool("HUM", SHOW_HUM);
@@ -374,6 +378,8 @@ bool IO_BROKER = false;
 bool NET_STATIC = false;
 bool SHOW_TIME = true;
 bool SHOW_TEMPTIME = false;
+bool TEMP_FLAME = true;
+uint8_t TEMP_FLAME_MIN = 35;
 bool SHOW_DATE = true;
 bool SHOW_WEATHER = true;
 bool SHOW_BAT = true;

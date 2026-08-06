@@ -304,12 +304,11 @@ void TimeApp(FastLED_NeoMatrix *matrix, MatrixDisplayUiState *state, int16_t x, 
 }
 
 // ######## Flame effect for the temperature box ########
-// Above FLAME_MIN_TEMP the 9x8 temperature box turns into a fire instead of being
+// Above TEMP_FLAME_MIN the 9x8 temperature box turns into a fire instead of being
 // painted in a flat red. A noise field provides the heat: the digits take their color
 // from it (so they flicker between orange, yellow and white), the free pixels around
 // them show a dimmed, red-only version of the same fire, and background pixels that are
 // enclosed by glyph strokes are forced black so the number stays readable.
-#define FLAME_MIN_TEMP 35  // °C, uses the rounded value that is shown on the display
 #define FLAME_W 9
 #define FLAME_H 8
 #define FLAME_TICK_MS 45     // animation step, decoupled from the app draw rate
@@ -485,11 +484,12 @@ void drawTemperatureBox(int16_t x, int16_t y, uint8_t timeMode)
     int degreeX = (absTemp < 10) ? offset + 4 : offset + 7;
 
     // Hot enough for the flame effect: the whole box burns instead of the flat red
-    // number plus gauge bar (the bar is saturated above 32°C anyway).
-    if (tempInt >= FLAME_MIN_TEMP)
+    // number plus gauge bar (the bar is saturated above 32°C anyway). The threshold is
+    // compared against the rounded value, so the effect and the number always agree.
+    if (TEMP_FLAME && tempInt >= TEMP_FLAME_MIN)
     {
         flameBuildMasks(tempInt, temp_str, offset, degreeX, minusX, minusW);
-        flameTick(constrain((tempInt - FLAME_MIN_TEMP) * 32, 0, 255));
+        flameTick(constrain((tempInt - TEMP_FLAME_MIN) * 32, 0, 255));
         flameRender(x, y);
         return;
     }

@@ -2073,6 +2073,8 @@ String DisplayManager_::getSettings()
   doc["SSPEED"] = SCROLL_SPEED;
   doc["TIM"] = SHOW_TIME;
   doc["TTIM"] = SHOW_TEMPTIME;
+  doc["TFLM"] = TEMP_FLAME;
+  doc["TFLT"] = TEMP_FLAME_MIN;
   doc["DAT"] = SHOW_DATE;
   doc["HUM"] = SHOW_HUM;
   doc["TEMP"] = SHOW_TEMP;
@@ -2155,6 +2157,8 @@ void DisplayManager_::setNewSettings(const char *json)
   BLOCK_NAVIGATION = doc.containsKey("BLOCKN") ? doc["BLOCKN"].as<bool>() : BLOCK_NAVIGATION;
   SHOW_TIME = doc.containsKey("TIM") ? doc["TIM"].as<bool>() : SHOW_TIME;
   SHOW_TEMPTIME = doc.containsKey("TTIM") ? doc["TTIM"].as<bool>() : SHOW_TEMPTIME;
+  TEMP_FLAME = doc.containsKey("TFLM") ? doc["TFLM"].as<bool>() : TEMP_FLAME;
+  TEMP_FLAME_MIN = doc.containsKey("TFLT") ? doc["TFLT"].as<uint8_t>() : TEMP_FLAME_MIN;
   SHOW_DATE = doc.containsKey("DAT") ? doc["DAT"].as<bool>() : SHOW_DATE;
   SHOW_HUM = doc.containsKey("HUM") ? doc["HUM"].as<bool>() : SHOW_HUM;
   SHOW_TEMP = doc.containsKey("TEMP") ? doc["TEMP"].as<bool>() : SHOW_TEMP;
